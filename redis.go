@@ -34,7 +34,6 @@ func NewRedisConfig(filePath string, fileName string, format string) (*RedisConf
 		return nil, fmt.Errorf("failed to read config file: %v", err)
 	}
 
-	var config RedisConfig
 	if err := viper.Unmarshal(&config); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %v", err)
 	}
@@ -43,11 +42,11 @@ func NewRedisConfig(filePath string, fileName string, format string) (*RedisConf
 }
 
 // NewRedisClient 初始化 Redis 客户端
-func NewRedisClient(ctx context.Context, config *RedisConfig) error {
+func NewRedisClient(ctx context.Context) error {
 	if config.IsCluster {
-		return initClusterClient(ctx, config)
+		return initClusterClient(ctx, &config)
 	}
-	return initSingleClient(ctx, config)
+	return initSingleClient(ctx, &config)
 }
 
 // initSingleClient 初始化单机模式 Redis 客户端
