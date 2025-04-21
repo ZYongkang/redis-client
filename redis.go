@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
+	"sync"
 )
 
 // RedisConfig 用于存储 Redis 配置
@@ -88,28 +89,50 @@ func GetClient() redis.UniversalClient {
 
 func Scan(ctx context.Context, pattern string, count int64, fn func(keys []string) error) error {
 	if config.IsCluster {
+		var wg sync.WaitGroup
+		var mu sync.Mutex
+		var firstErr error
+
 		err := ClusterClient.ForEachMaster(ctx, func(context context.Context, master *redis.Client) error {
-			var cursor uint64 = 0
-			for {
-				k, c, err := master.Scan(context, cursor, pattern, count).Result()
-				if err != nil {
-					fmt.Println("Error scanning keys: ", err)
+			wg.Add(1)
+			go func(master *redis.Client) {
+				defer wg.Done()
+				var cursor uint64 = 0
+				for {
+					k, c, err := master.Scan(context, cursor, pattern, count).Result()
+					if err != nil {
+						mu.Lock()
+						if firstErr == nil {
+							firstErr = err
+						}
+						fmt.Println("Error scanning keys: ", err)
+						mu.Unlock()
+						return
+					}
+
+					if err := fn(k); err != nil {
+						mu.Lock()
+						if firstErr == nil {
+							firstErr = err
+						}
+						mu.Unlock()
+						return
+					}
+					// 如果 cursor 为 0，表示扫描完成
+					if c == 0 {
+						fmt.Println("Scan completed")
+						break
+					}
+					cursor = c
 				}
 
-				// 将符合条件的键放入 channel 中
-				err = fn(k)
-				if err != nil {
-					return err
-				}
-				// 如果 cursor 为 0，表示扫描完成
-				if c == 0 {
-					fmt.Println("Scan completed")
-					break
-				}
-				cursor = c
-			}
+			}(master)
 			return nil
 		})
+		wg.Wait()
+		if firstErr != nil {
+			return firstErr
+		}
 		return err
 	} else {
 		var cursor uint64 = 0
