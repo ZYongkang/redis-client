@@ -132,3 +132,42 @@ func Scan(ctx context.Context, pattern string, count int64, fn func(keys []strin
 		return nil
 	}
 }
+
+func Type(ctx context.Context, key string) (string, error) {
+	if config.IsCluster {
+		result, err := ClusterClient.Type(ctx, key).Result()
+		if err != nil {
+			return "", fmt.Errorf("failed to get type of key %s: %v", key, err)
+		}
+		if result == "none" {
+			return "", fmt.Errorf("key %s does not exist", key)
+		}
+		return result, nil
+
+	} else {
+		typ, err := Client.Type(ctx, key).Result()
+		if err != nil {
+			return "", fmt.Errorf("failed to get type of key %s: %v", key, err)
+		}
+		if typ == "none" {
+			return "", fmt.Errorf("key %s does not exist", key)
+		}
+		return typ, nil
+	}
+}
+
+func Get(ctx context.Context, key string) (string, error) {
+	if config.IsCluster {
+		result, err := ClusterClient.Get(ctx, key).Result()
+		if err != nil {
+			return "", fmt.Errorf("failed to get value of key %s: %v", key, err)
+		}
+		return result, nil
+	} else {
+		result, err := Client.Get(ctx, key).Result()
+		if err != nil {
+			return "", fmt.Errorf("failed to get value of key %s: %v", key, err)
+		}
+		return result, nil
+	}
+}
