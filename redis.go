@@ -99,7 +99,7 @@ func Scan(ctx context.Context, pattern string, count int64, fn func(keys []strin
 				defer wg.Done()
 				var cursor uint64 = 0
 				for {
-					k, c, err := master.Scan(context, cursor, pattern, count).Result()
+					k, c, err := master.Scan(ctx, cursor, pattern, count).Result()
 					if err != nil {
 						mu.Lock()
 						if firstErr == nil {
@@ -120,12 +120,11 @@ func Scan(ctx context.Context, pattern string, count int64, fn func(keys []strin
 					}
 					// 如果 cursor 为 0，表示扫描完成
 					if c == 0 {
-						fmt.Println("Scan completed")
+						fmt.Printf("Scan completed on master: %v\n", master)
 						break
 					}
 					cursor = c
 				}
-
 			}(master)
 			return nil
 		})
