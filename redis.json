@@ -1,0 +1,5 @@
+{
+  "addr": "172.29.1.65:6379",
+  "is_cluster": false,
+  "password": "easemob"
+}
