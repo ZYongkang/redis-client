@@ -24,25 +24,25 @@ var (
 	config        RedisConfig
 )
 
-// NewRedisConfig 从配置文件读取 Redis 配置
-func NewRedisConfig(filePath string, fileName string, format string) (*RedisConfig, error) {
+// InitRedisConfig 从配置文件读取 Redis 配置
+func InitRedisConfig(filePath string, fileName string, format string) error {
 	viper.SetConfigName(fileName) // 配置文件名 (不带扩展名)
 	viper.SetConfigType(format)   // 配置文件类型
 	viper.AddConfigPath(filePath) // 配置文件路径
 
 	if err := viper.ReadInConfig(); err != nil {
-		return nil, fmt.Errorf("failed to read config file: %v", err)
+		return fmt.Errorf("failed to read config file: %v", err)
 	}
 
 	if err := viper.Unmarshal(&config); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal config: %v", err)
+		return fmt.Errorf("failed to unmarshal config: %v", err)
 	}
 
-	return &config, nil
+	return nil
 }
 
-// NewRedisClient 初始化 Redis 客户端
-func NewRedisClient(ctx context.Context) error {
+// InitRedisClient 初始化 Redis 客户端
+func InitRedisClient(ctx context.Context) error {
 	if config.IsCluster {
 		return initClusterClient(ctx, &config)
 	}
@@ -86,6 +86,7 @@ func GetClient() redis.UniversalClient {
 	return Client
 }
 
+// 根据模式选择 Redis 客户端 执行 Scan 命令
 func Scan(ctx context.Context, pattern string, count int64, fn func(keys []string) error) error {
 	if config.IsCluster {
 		var wg sync.WaitGroup
